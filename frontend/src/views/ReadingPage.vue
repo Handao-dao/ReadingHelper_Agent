@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useReadingStream } from '../composables/useReadingStream'
 import { formatAnnotatedText } from '../utils/formatText'
 import { fetchMasteredWords } from '../api/vocabulary'
+import { lookupWord, addVocabToDB } from '../api/lookup'
 
 const LEVEL_LABELS = { beginner: '初级', intermediate: '中级', advanced: '高级' }
 
@@ -25,10 +26,6 @@ const formattedHtml = computed(() => {
   return formatAnnotatedText(annotatedText.value, masteredWords.value)
 })
 
-onMounted(async () => {
-  masteredWords.value = await fetchMasteredWords()
-})
-
 const handleSubmit = async () => {
   const text = inputText.value.trim()
 
@@ -44,12 +41,90 @@ const handleSubmit = async () => {
 }
 
 const handleKeydown = (event) => {
-  // Enter 发送，Shift + Enter 换行
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault()
     handleSubmit()
   }
 }
+
+// ---- 气泡查词 ----
+const bubbleVisible = ref(false)
+const bubbleLoading = ref(false)
+const bubbleWord = ref('')
+const bubbleSentence = ref('')
+const bubbleIsAnnotated = ref(false)
+const bubbleResult = ref(null)
+
+function extractSentence(el) {
+  const container = document.querySelector('.reading-content')
+  if (!container) return ''
+  const allWords = [...container.querySelectorAll('[data-word]')]
+  const idx = allWords.indexOf(el)
+  if (idx === -1) return ''
+
+  // 向前找句子开头
+  let start = idx
+  while (start > 0) {
+    const prevText = allWords[start - 1].textContent
+    if (/[.!?]$/.test(prevText)) break
+    start--
+  }
+  // 向后找句子结尾
+  let end = idx
+  while (end < allWords.length - 1) {
+    const curText = allWords[end].textContent
+    if (/[.!?]$/.test(curText)) break
+    end++
+  }
+  return allWords.slice(start, end + 1).map(s => s.textContent).join(' ')
+}
+
+async function handleContentClick(e) {
+  const wordEl = e.target.closest('[data-word]')
+  if (!wordEl) {
+    bubbleVisible.value = false
+    return
+  }
+
+  const word = wordEl.dataset.word
+  const isAnnotated = wordEl.classList.contains('vocab-word')
+
+  bubbleWord.value = word
+  bubbleSentence.value = extractSentence(wordEl)
+  bubbleIsAnnotated.value = isAnnotated
+  bubbleResult.value = null
+  bubbleVisible.value = true
+  bubbleLoading.value = true
+
+  try {
+    const result = await lookupWord(word, bubbleSentence.value)
+    bubbleResult.value = result
+  } catch {
+    bubbleResult.value = { word, word_cn: '查询失败', sentence_cn: '' }
+  } finally {
+    bubbleLoading.value = false
+  }
+}
+
+async function addToVocabFromBubble() {
+  if (!bubbleResult.value) return
+  const { word, word_cn } = bubbleResult.value
+  await addVocabToDB(word, word_cn, bubbleSentence.value)
+  bubbleIsAnnotated.value = true
+}
+
+function handleEscKey(e) {
+  if (e.key === 'Escape') bubbleVisible.value = false
+}
+
+onMounted(async () => {
+  masteredWords.value = await fetchMasteredWords()
+  document.addEventListener('keydown', handleEscKey)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleEscKey)
+})
 </script>
 
 <template>
@@ -111,7 +186,30 @@ const handleKeydown = (event) => {
           v-if="formattedHtml"
           class="reading-content"
           v-html="formattedHtml"
+          @click="handleContentClick"
         ></div>
+
+        <!-- 单词气泡弹窗 -->
+        <div v-if="bubbleVisible" class="word-bubble" @click.stop>
+          <div v-if="bubbleLoading" class="bubble-loading">查询中...</div>
+          <template v-else-if="bubbleResult">
+            <div class="bubble-word">{{ bubbleResult.word }}</div>
+            <div class="bubble-word-cn">{{ bubbleResult.word_cn }}</div>
+            <div v-if="bubbleResult.sentence_cn" class="bubble-sentence-cn">
+              {{ bubbleResult.sentence_cn }}
+            </div>
+            <div class="bubble-actions">
+              <button
+                v-if="!bubbleIsAnnotated"
+                class="bubble-btn bubble-btn-add"
+                @click="addToVocabFromBubble"
+              >
+                添加生词
+              </button>
+            </div>
+          </template>
+          <div v-else class="bubble-loading">查询失败</div>
+        </div>
 
         <div
           v-else
@@ -281,6 +379,82 @@ const handleKeydown = (event) => {
 :deep(.reading-content p) {
   margin-bottom: 1.5em;
   text-align: justify;
+}
+
+/* 单词气泡弹窗 */
+.word-bubble {
+  position: fixed;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  width: 420px;
+  max-width: calc(100vw - 48px);
+  padding: 20px 24px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 245, 210, 0.3), transparent 60%),
+    linear-gradient(160deg, #f8e8c0 0%, #ead19a 40%, #d4ba78 100%);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.45),
+    inset 0 0 24px rgba(84, 47, 15, 0.15);
+  border: 1px solid rgba(98, 60, 24, 0.35);
+}
+
+.bubble-loading {
+  text-align: center;
+  color: rgba(64, 42, 18, 0.5);
+  font-size: 14px;
+  padding: 12px 0;
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.bubble-word {
+  font-family: 'Bookerly', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2f2112;
+  margin-bottom: 4px;
+}
+
+.bubble-word-cn {
+  font-size: 16px;
+  color: #6c4b24;
+  margin-bottom: 12px;
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.bubble-sentence-cn {
+  font-size: 13px;
+  color: #5c4a32;
+  line-height: 1.7;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: rgba(111, 72, 28, 0.06);
+  border-radius: 8px;
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.bubble-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bubble-btn {
+  padding: 6px 16px;
+  border: 1px solid rgba(98, 60, 24, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 250, 236, 0.6);
+  color: #5a3417;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.bubble-btn-add:hover {
+  background: #5a3417;
+  color: #fff2d5;
 }
 
 /* 空状态 */

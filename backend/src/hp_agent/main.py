@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from hello_agents import HelloAgentsLLM
 from hp_agent.agent1 import AnnotatorService
+from hp_agent.agent2 import WordLookupService
 from hp_agent.sse_service import DocumentProcessor
 from hp_agent.vocab_db import VocabDB
 
@@ -50,6 +51,7 @@ app.add_middleware(
 # ==============================
 llm = HelloAgentsLLM()
 annotator_svc = AnnotatorService(llm)
+lookup_svc = WordLookupService(llm)
 doc_processor = DocumentProcessor(annotator_svc)
 vocab_db = VocabDB(os.getenv("VOCAB_DB_PATH", "./data/harry_potter_vocab.db"))
 
@@ -64,6 +66,17 @@ class CreateProcessTaskRequest(BaseModel):
 
 class SetMasteredRequest(BaseModel):
     mastered: bool = Field(..., description="是否已掌握")
+
+
+class WordLookupRequest(BaseModel):
+    word: str = Field(..., description="要查询的单词")
+    sentence: str = Field(..., description="单词所在的句子上下文")
+
+
+class AddVocabRequest(BaseModel):
+    word: str = Field(..., description="生词")
+    translation: str = Field(..., description="中文翻译")
+    context: str = Field(default="", description="上下文句子")
 
 
 # ==============================
@@ -205,6 +218,20 @@ async def delete_vocabulary(vocab_id: int):
         raise HTTPException(status_code=404, detail="生词不存在")
     vocab_db.delete_vocabulary(vocab_id)
     return {"ok": True}
+
+
+@app.post("/api/word-lookup")
+async def word_lookup(request: WordLookupRequest):
+    result = lookup_svc.lookup(request.word, request.sentence)
+    return result
+
+
+@app.post("/api/vocabulary")
+async def add_vocabulary(request: AddVocabRequest):
+    vocab_id = vocab_db.upsert_vocabulary(
+        request.word, request.translation, request.context
+    )
+    return {"id": vocab_id, "ok": True}
 
 
 # ==============================
