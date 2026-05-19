@@ -37,7 +37,7 @@ hp_agent/
 │       ├── sse_service.py      # DocumentProcessor：分块 + 并行 + 流式
 │       ├── vocab_db.py         # SQLite 持久化：生词 + 历史记录
 │       ├── utils.py             # 公共工具（extract_json + sse_event）
-│       └── tobecontinued/      # 待开发模块
+│       └── tobecontinued/config.py  # 待开发：配置模块
 ├── frontend/
 │   ├── index.html
 │   ├── vite.config.js          # Vite 配置 + API 代理
@@ -173,4 +173,4 @@ MAX_MASTERED_WORDS_IN_PROMPT=300
 - 生词导出（CSV/Anki 格式）
 - 发音（TTS 或音标）
 - 生产环境任务队列（Redis 替代内存字典）
-- `tobecontinued/` 目录下的 dictionary_service、config、utils 模块
+- `tobecontinued/config.py` 配置模块完善
