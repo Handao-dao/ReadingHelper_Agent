@@ -1,82 +1,147 @@
 # HP-Agent
 
-哈利波特英文阅读助手 — 输入英文段落，LLM 自动标注生词并插入中文翻译，流式渲染到羊皮纸风格的阅读页面。
+> 英文原著阅读助手：面向英文小说、原版读物和长文本阅读场景，自动识别生词、短语、专有名词和上下文表达，并在原文中插入中文释义，帮助用户更顺畅地完成英文阅读。
 
-## 功能概述
+HP-Agent 是一个基于 FastAPI、Vue 3 和 LLM 的英文阅读辅助工具。用户输入英文段落后，系统会按照所选阅读水平自动完成生词标注、中文释义插入和流式渲染；同时支持生词本、历史记录、点击查词和已掌握词过滤等功能，适合用于英文原著阅读、语言学习和专业术语理解。
 
-- 输入英文文本 → LLM 自动识别生词/短语/魔法术语 → 插入中文翻译
-- 前端羊皮纸主题渲染，生词暗金色高亮，中文翻译次视觉层级
-- 流式 SSE 推送处理进度，chunk 并行加速
-- 三级阅读水平（初级/中级/高级），控制标注密度
-- 生词本：跨会话累积，搜索/标记已掌握/忽略，已掌握词按时间排序
-- 翻译历史记录：自动保存，可回看可删除
-- 点击单词弹出气泡查词：LLM 词翻译 + 整句翻译，支持添加生词和标记已掌握
-- Bookerly 衬线字体，阅读体验贴近纸质书
+当前项目以《哈利·波特》英文原著片段作为示例阅读场景，因此在提示词和页面风格上保留了魔法术语、人物称谓、小说叙事语境和羊皮纸视觉风格等设计。项目本身并不局限于《哈利·波特》，后续可以通过调整系统提示词、术语识别规则和前端主题，扩展到其他英文小说、专业教材、技术文档或新闻文章等阅读场景。
+
+## 项目定位
+
+本项目的核心定位是“英文原著阅读助手”，重点解决用户在阅读英文长文本时遇到的三类问题：生词影响理解、长句和上下文翻译成本较高、已学词汇缺少持续管理。
+
+《哈利·波特》在本项目中主要作为示例阅读场景，用来展示系统如何处理英文小说中的人物、地点、魔法术语和叙事表达。例如，系统可以针对 spell、wand、Muggle、Hogwarts 等具有作品语境的词汇给出更符合小说背景的中文解释，而不是只提供普通词典释义。
+
+由于不同阅读材料的难点不同，系统提示词可以根据具体场景继续优化。例如，阅读英文小说时可以强调人物关系、习语和叙事语气；阅读计算机技术文档时可以强调 API、命令、参数和专业术语；阅读学术论文时可以强调领域概念、方法名称和句子逻辑。这样可以让同一套阅读工具更好地适配不同类型的英文文本。
+
+## 核心功能
+
+### 阅读批注
+
+- 支持输入英文文本，并由 LLM 自动识别生词、短语、专有名词和场景化术语。
+- 使用 `[[word|中文释义]]` 标记格式，前端可稳定解析并高亮显示。
+- 提供初级、中级、高级三种阅读水平，用于控制标注密度和解释深度。
+- 支持 SSE 流式输出，处理进度实时展示，减少长文本等待感。
+- 前端采用羊皮纸风格页面和 Bookerly 衬线字体，提升沉浸式阅读体验。
+
+### 生词管理
+
+- 自动累积生词，支持跨会话保存。
+- 支持搜索、添加、忽略和标记已掌握。
+- 已掌握词按时间排序，并可在阅读页面中自动过滤标注。
+- 原始批注结果保持不变，是否显示翻译由前端根据 `masteredWords` 集合动态控制。
+
+### 历史记录与点击查词
+
+- 每次完成批注后自动保存翻译历史。
+- 支持历史记录查看、展开和删除。
+- 阅读页面支持点击单词弹出查词气泡。
+- 查词气泡同时展示单词释义和整句翻译，并支持添加生词、标记已掌握和忽略。
+
+### 性能与稳定性
+
+- 长文本按段落和词数切分为 chunk。
+- 使用 `asyncio.Semaphore(3)` 控制并行请求数量，提升整体处理速度。
+- 对 DeepSeek v4-pro 关闭 thinking mode，降低翻译标注任务的响应耗时。
+- 使用 SQLite 进行本地持久化，减少额外部署依赖。
+- 已加入去重、超时保护、错误处理、并发安全和响应式状态重构等优化。
 
 ## 技术栈
 
-| 层 | 技术 |
-|------|------|
-| 后端框架 | Python FastAPI |
-| AI Agent | hello_agents (SimpleAgent) |
-| LLM | DeepSeek v4-pro (via OpenAI 兼容 API) |
-| 前端框架 | Vue 3 + Vite |
-| 字体 | Bookerly (Regular + Bold) |
+| 模块       | 技术                                 |
+| ---------- | ------------------------------------ |
+| 后端框架   | Python + FastAPI                     |
+| AI Agent   | hello_agents / SimpleAgent           |
+| LLM 接口   | DeepSeek v4-pro，OpenAI 兼容 API     |
+| 流式通信   | Server-Sent Events（SSE）            |
+| 数据存储   | SQLite                               |
+| 前端框架   | Vue 3 + Vite                         |
+| 前端路由   | vue-router                           |
+| 字体与视觉 | Bookerly、羊皮纸主题、暗金色生词高亮 |
 
 ## 项目结构
 
-```
+```text
 hp_agent/
 ├── backend/
-│   ├── .env                    # API 密钥、模型配置
-│   ├── pyproject.toml          # Python 依赖
+│   ├── .env                         # 本地环境变量，不应提交到仓库
+│   ├── .env.example                 # 环境变量模板
+│   ├── pyproject.toml               # Python 项目依赖
 │   └── src/hp_agent/
-│       ├── main.py             # FastAPI 入口 + SSE 接口 + REST API
-│       ├── agent1.py           # AnnotatorService + 系统提示词 + 分级规则
-│       ├── agent2.py           # WordLookupService：单词查询 + 句子翻译
-│       ├── sse_service.py      # DocumentProcessor：分块 + 并行 + 流式
-│       ├── vocab_db.py         # SQLite 持久化：生词 + 历史记录
-│       ├── utils.py             # 公共工具（extract_json + sse_event）
-│       └── tobecontinued/config.py  # 待开发：配置模块
+│       ├── main.py                  # FastAPI 入口、SSE 接口、REST API
+│       ├── agent1.py                # 批注服务、系统提示词、分级规则
+│       ├── agent2.py                # 点击查词与整句翻译服务
+│       ├── sse_service.py           # 文本切分、并行处理、流式推送
+│       ├── vocab_db.py              # SQLite 持久化：生词与历史记录
+│       ├── utils.py                 # 公共工具：JSON 提取、SSE 事件封装
+│       └── tobecontinued/
+│           └── config.py            # 待完善的配置模块
+│
 ├── frontend/
 │   ├── index.html
-│   ├── vite.config.js          # Vite 配置 + API 代理
-│   ├── public/fonts/           # Bookerly 字体文件
+│   ├── vite.config.js               # Vite 配置与 API 代理
+│   ├── public/fonts/                # Bookerly 字体文件
 │   └── src/
-│       ├── main.js             # Vue 入口
-│       ├── App.vue             # 根组件（全局背景 + Tab 导航）
+│       ├── main.js                  # Vue 应用入口
+│       ├── App.vue                  # 根组件与全局布局
 │       ├── router/
-│       │   └── index.js        # 三路由：/ /vocabulary /history
+│       │   └── index.js             # 页面路由：阅读 / 生词本 / 历史记录
 │       ├── views/
-│       │   ├── ReadingPage.vue # 阅读页面（含水平选择器）
-│       │   ├── VocabularyPage.vue  # 生词本（生词/已掌握子 Tab）
-│       │   └── HistoryPage.vue     # 历史记录（展开/删除）
+│       │   ├── ReadingPage.vue      # 阅读页面与水平选择器
+│       │   ├── VocabularyPage.vue   # 生词本页面
+│       │   └── HistoryPage.vue      # 历史记录页面
 │       ├── composables/
-│       │   ├── useReadingStream.js  # SSE 连接 + 状态管理
+│       │   ├── useReadingStream.js  # SSE 连接与阅读状态管理
 │       │   └── useMasteredWords.js  # 已掌握词汇共享状态
 │       ├── utils/
-│       │   └── formatText.js   # 标记解析 + 已掌握词过滤
+│       │   └── formatText.js        # 标记解析与已掌握词过滤
 │       └── api/
-│           ├── reading.js      # POST 创建任务
-│           ├── vocabulary.js   # 生词 CRUD
-│           ├── history.js      # 历史 CRUD
-│           └── lookup.js       # 单词查询 + 添加生词
+│           ├── reading.js           # 阅读任务接口
+│           ├── vocabulary.js        # 生词 CRUD 接口
+│           ├── history.js           # 历史记录 CRUD 接口
+│           └── lookup.js            # 点击查词接口
 ```
 
 ## 快速开始
 
-**前置要求：** Python 3.10+, Node.js 18+
+### 1. 环境要求
 
-**后端：**
+- Python 3.10+
+- Node.js 18+
+- DeepSeek API Key
+- 推荐使用 `uv` 管理 Python 依赖
+
+### 2. 配置环境变量
+
+复制后端环境变量模板：
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+然后在 `backend/.env` 中填写你的 DeepSeek API Key：
+
+```env
+LLM_API_KEY=sk-your-api-key-here
+```
+
+> 注意：`.env` 文件包含敏感信息，请勿提交到公开仓库。
+
+### 3. 启动后端
 
 ```bash
 cd backend
-cp .env.example .env    # 填写 LLM_API_KEY
 uv sync
 uvicorn hp_agent.main:app --reload
 ```
 
-**前端：**
+默认后端地址：
+
+```text
+http://127.0.0.1:8000
+```
+
+### 4. 启动前端
 
 ```bash
 cd frontend
@@ -84,58 +149,32 @@ npm install
 npm run dev
 ```
 
-访问 `http://localhost:5173`，输入英文文本，按 Enter 开始处理。
+默认前端地址：
 
-## 配置
-
-项目需要 DeepSeek API Key 才能调用 LLM。配置步骤：
-
-1. 访问 [DeepSeek 开放平台](https://platform.deepseek.com)，注册并获取 API Key
-2. 复制模板文件：`cp backend/.env.example backend/.env`
-3. 将 `backend/.env` 中的 `LLM_API_KEY=sk-your-api-key-here` 替换为你的真实 Key
-
-其他可调参数见 [配置参考](#配置参考-env)。
-
-## 数据流
-
-```
-用户输入文本 + 选择水平
-  → POST /api/create-process-task (task_id + level)
-  → EventSource /api/process-stream?task_id=...
-  → 从 SQLite 查询 mastered_words → 传入 LLM prompt
-  → DocumentProcessor 分段落 → 合并 chunk (max 300 词)
-  → asyncio.Semaphore(3) 并行请求 LLM
-  → AnnotatorService → 分级提示词 → DeepSeek API (thinking=disabled)
-  → LLM 输出 [[word|翻译]] 标记的 annotated_text
-  → SSE 流式推送 progress + completed 事件
-  → _maybe_save_completed() 自动写入 SQLite（生词 upsert + 历史保存）
-  → 前端 formatText.js 解析 [[...|...]] + masteredWords 过滤
-  → ReadingPage.vue 渲染 (Bookerly 字体 + 暗金色高亮)
-
-# 点击查词流程（独立于批注流程）
-点击单词 → 事件委托捕获 → extractSentence() 提取句子
-  → POST /api/word-lookup { word, sentence }
-  → WordLookupService → DeepSeek API
-  → 气泡弹窗显示词翻译 + 句翻译 + [添加生词]/[已掌握]/[忽略]
+```text
+http://localhost:5173
 ```
 
-## 关键设计决策
+打开页面后，输入英文段落并按 Enter，即可开始批注处理。
 
-| 决策 | 说明 |
-|------|------|
-| **标记格式 `[[word\|翻译]]`** | LLM 直接输出标记，前端不再用词表反向匹配，消除漏词问题 |
-| **并行 chunk 处理** | `asyncio.Semaphore(3)` 替代顺序 for 循环，N chunk 从 N 轮降为 ceil(N/3) 轮 |
-| **关闭 thinking mode** | `extra_body={"thinking": {"type": "disabled"}}`，翻译标注无需深度推理，单次调用从 ~40s 降至 ~10s |
-| **Bookerly 字体** | Amazon 定制衬线体，Regular + Bold 双字重避免 faux bold |
-| **SQLite 持久化** | 生词 upsert 去重累加，历史记录自动保存，零额外依赖 |
-| **三级标注密度** | `beginner`/`intermediate`/`advanced` 三套英文规则，控制标注阈值，不影响翻译字数 |
-| **已掌握渲染过滤** | `annotated_text` 原样存储，渲染时根据 `masteredWords` 集合决定是否显示标注，可逆 |
-| **生词本 + 历史子页面** | vue-router 三路由，Tab 导航切换，生词本内分子 Tab（生词/已掌握） |
-| **点击查词 + 气泡弹窗** | Agent2 独立 LLM 智能体，前端 DOM 级句子提取，气泡跟随单词位置，添加生词/标记已掌握即时渲染 |
+## 配置参考
 
-## 配置参考 (.env)
+| 配置项                         | 示例值                         | 说明                               |
+| ------------------------------ | ------------------------------ | ---------------------------------- |
+| `LLM_MODEL_ID`                 | `deepseek-v4-pro`              | 使用的模型名称                     |
+| `LLM_API_KEY`                  | `sk-xxx`                       | LLM API Key                        |
+| `LLM_BASE_URL`                 | `https://api.deepseek.com`     | OpenAI 兼容接口地址                |
+| `LLM_TIMEOUT`                  | `60`                           | 单次请求超时时间，单位为秒         |
+| `LLM_TEMPERATURE`              | `0.2`                          | 输出随机性，较低值可提升翻译稳定性 |
+| `HOST`                         | `127.0.0.1`                    | 后端服务监听地址                   |
+| `PORT`                         | `8000`                         | 后端服务端口                       |
+| `VOCAB_DB_PATH`                | `./data/harry_potter_vocab.db` | SQLite 数据库路径                  |
+| `DATA_DIR`                     | `./data`                       | 数据目录                           |
+| `MAX_MASTERED_WORDS_IN_PROMPT` | `300`                          | 传入 prompt 的已掌握词数量上限     |
 
-```
+完整示例：
+
+```env
 LLM_MODEL_ID=deepseek-v4-pro
 LLM_API_KEY=sk-xxx
 LLM_BASE_URL=https://api.deepseek.com
@@ -148,29 +187,129 @@ DATA_DIR=./data
 MAX_MASTERED_WORDS_IN_PROMPT=300
 ```
 
-`LLM_TEMPERATURE` 设 0.2 保证翻译输出稳定一致。`MAX_MASTERED_WORDS_IN_PROMPT` 限制传入 LLM 的已掌握词数量上限，防止 prompt 过长。
+## 场景化提示词优化
+
+本项目不是依赖固定词典进行机械匹配，而是通过 LLM 根据文本语境动态判断哪些词汇值得标注。因此，提示词设计会直接影响标注质量、翻译风格和术语解释的准确性。
+
+在《哈利·波特》示例场景中，提示词可以重点约束以下内容：
+
+- 优先识别魔法术语、人物称谓、地点名称、咒语和具有作品语境的表达。
+- 对普通生词给出简洁中文释义，对专有名词尽量结合上下文解释。
+- 保持原文句子结构，不随意改写英文内容。
+- 严格使用 `[[word|中文释义]]` 格式，保证前端能够稳定解析。
+- 根据 beginner / intermediate / advanced 三种阅读水平控制标注密度，避免过度标注影响阅读体验。
+
+如果要适配其他阅读场景，可以针对提示词进行替换或扩展。例如：
+
+| 阅读场景       | 提示词优化重点                                       |
+| -------------- | ---------------------------------------------------- |
+| 英文小说       | 人物关系、习语、修辞表达、场景描写和文化背景。       |
+| 计算机技术文档 | API 名称、命令行参数、框架概念、报错信息和专业术语。 |
+| 学术论文       | 研究方法、核心概念、模型名称、实验指标和长难句逻辑。 |
+| 新闻或商业文章 | 机构名称、政策术语、行业表达、缩写和事件背景。       |
+
+这种设计的优点是：系统主体逻辑不需要大幅修改，只需要调整提示词和少量前端展示配置，就可以从“哈利波特英文阅读助手”扩展为更加通用的英文原著阅读辅助工具。
+
+## 核心流程
+
+### 批注流程
+
+```text
+用户输入英文文本并选择阅读水平
+  ↓
+POST /api/create-process-task，创建处理任务
+  ↓
+EventSource 连接 /api/process-stream?task_id=...
+  ↓
+从 SQLite 查询已掌握词汇，并写入 LLM prompt
+  ↓
+DocumentProcessor 按段落和词数切分文本
+  ↓
+使用 asyncio.Semaphore(3) 并行请求 LLM
+  ↓
+AnnotatorService 根据阅读水平生成批注结果
+  ↓
+LLM 返回 [[word|中文释义]] 格式的 annotated_text
+  ↓
+SSE 推送 progress 和 completed 事件
+  ↓
+后端自动保存生词与历史记录
+  ↓
+前端解析标记、过滤已掌握词并完成渲染
+```
+
+### 点击查词流程
+
+```text
+用户点击阅读页面中的单词
+  ↓
+前端事件委托捕获目标单词
+  ↓
+extractSentence() 提取单词所在句子
+  ↓
+POST /api/word-lookup，提交 word 和 sentence
+  ↓
+WordLookupService 调用 DeepSeek API
+  ↓
+返回单词释义和整句翻译
+  ↓
+前端展示气泡弹窗
+  ↓
+用户可添加生词、标记已掌握或忽略
+```
+
+## 接口概览
+
+| 接口                       | 方法                        | 说明                        |
+| -------------------------- | --------------------------- | --------------------------- |
+| `/api/create-process-task` | POST                        | 创建文本批注任务            |
+| `/api/process-stream`      | GET                         | 建立 SSE 连接并接收处理进度 |
+| `/api/word-lookup`         | POST                        | 查询单词释义与整句翻译      |
+| `/api/vocabulary`          | GET / POST / PATCH / DELETE | 生词本相关操作              |
+| `/api/history`             | GET / DELETE                | 历史记录查看与删除          |
+
+## 关键设计说明
+
+| 设计点             | 说明                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 标记格式           | 使用 `[[word                                                                           | 中文释义]]`，让 LLM 直接输出可解析结构，避免前端反向匹配造成漏词。 |
+| 分级批注           | 通过 beginner / intermediate / advanced 三套规则控制标注阈值，而不是简单截断翻译内容。 |
+| 场景化提示词       | 根据英文小说、技术文档、论文等不同阅读材料调整术语识别范围和解释风格。                 |
+| 并行 chunk         | 将长文本拆分后并行处理，将多段文本的等待时间从顺序累加改为分批完成。                   |
+| 关闭 thinking mode | 翻译批注任务不需要复杂推理，关闭后可降低响应时间和 token 消耗。                        |
+| SQLite 持久化      | 本地即可保存生词和历史记录，适合个人学习工具的轻量化部署。                             |
+| 已掌握词过滤       | 保存原始批注结果，前端在渲染阶段动态过滤，方便恢复和重新展示。                         |
+| 独立查词 Agent     | 点击查词与全文批注解耦，降低功能之间的耦合度。                                         |
 
 ## 更新日志
 
-- 2026-05-10: 羊皮纸背景 + Bookerly 字体 + 生词暗金色高亮样式
-- 2026-05-10: 标记化生词标注（`[[word|中文]]` 替代括号格式），解决前端正则匹配漏词
-- 2026-05-10: chunk 并行处理 (`asyncio.Semaphore`) + 增大 chunk 上限 (180→300 词)
-- 2026-05-10: 关闭 DeepSeek v4-pro 思考模式 (`extra_body`)
-- 2026-05-10: SQLite 持久化（vocab_db.py）+ 5 个 REST API 端点
-- 2026-05-10: 前端三页面导航（vue-router）+ Tab 栏
-- 2026-05-11: 生词本：搜索/标记已掌握/忽略，已掌握词按时间排序
-- 2026-05-11: 已掌握词汇渲染过滤（存储不变，渲染时按集合过滤，可逆）
-- 2026-05-14: 翻译历史记录自动保存 + 列表/详情/删除
-- 2026-05-14: 三级阅读水平（初级/中级/高级）控制标注密度
-- 2026-05-15: 点击查词气泡弹窗（agent2 + `POST /api/word-lookup` + DOM 句子提取 + 气泡定位）
-- 2026-05-15: 生词本批量操作（全选/标记已掌握/忽略）
-- 2026-05-16: 气泡添加生词即时 DOM 渲染、标记已掌握即时移除翻译
-- 2026-05-18: 三轮代码审查修复（23 项）——去重/超时保护/错误处理/并发安全/响应式重构
-- 2026-05-18: 新增 `useMasteredWords` 共享 composable、`utils.py` 公共模块、WAL shutdown 钩子
+| 日期       | 更新内容                                                                                 |
+| ---------- | ---------------------------------------------------------------------------------------- | --------------------------------------- |
+| 2026-05-10 | 新增羊皮纸背景、Bookerly 字体和暗金色生词高亮样式。                                      |
+| 2026-05-10 | 将生词批注格式改为 `[[word                                                               | 中文释义]]`，解决前端正则匹配漏词问题。 |
+| 2026-05-10 | 引入 chunk 并行处理，并将 chunk 上限从 180 词提升至 300 词。                             |
+| 2026-05-10 | 关闭 DeepSeek v4-pro thinking mode，降低单次批注耗时。                                   |
+| 2026-05-10 | 新增 SQLite 持久化和 5 个 REST API 端点。                                                |
+| 2026-05-10 | 新增 vue-router 三页面导航和 Tab 栏。                                                    |
+| 2026-05-11 | 生词本支持搜索、标记已掌握和忽略操作。                                                   |
+| 2026-05-11 | 支持已掌握词汇渲染过滤，存储结果保持可逆。                                               |
+| 2026-05-14 | 新增翻译历史记录自动保存、列表查看、详情展开和删除功能。                                 |
+| 2026-05-14 | 新增初级、中级、高级三种阅读水平。                                                       |
+| 2026-05-15 | 新增点击查词气泡弹窗。                                                                   |
+| 2026-05-15 | 生词本新增批量全选、标记已掌握和忽略操作。                                               |
+| 2026-05-16 | 气泡添加生词后支持即时 DOM 渲染，标记已掌握后可即时移除翻译。                            |
+| 2026-05-18 | 完成三轮代码审查修复，共处理去重、超时保护、错误处理、并发安全和响应式重构等 23 项问题。 |
+| 2026-05-18 | 新增 `useMasteredWords` 共享 composable、`utils.py` 公共模块和 WAL shutdown 钩子。       |
 
-## 待开发
+## 后续计划
 
-- 生词导出（CSV/Anki 格式）
-- 发音（TTS 或音标）
-- 生产环境任务队列（Redis 替代内存字典）
-- `tobecontinued/config.py` 配置模块完善
+- 支持生词导出为 CSV 或 Anki 格式。
+- 增加单词发音、音标或 TTS 功能。
+- 引入生产环境任务队列，例如 Redis，替代内存任务字典。
+- 完善 `tobecontinued/config.py`，统一管理后端配置。
+- 增加提示词模板配置，支持按照小说、技术文档、学术论文等场景快速切换。
+- 增加部署说明，例如 Docker、Nginx 反向代理和生产环境启动方式。
+
+## 说明
+
+本项目主要面向英文阅读学习与个人工具开发场景，用于辅助理解英文文本、生词和上下文含义。《哈利·波特》只是当前版本的示例阅读场景，实际使用时可以根据目标材料调整提示词和展示风格。使用前请确保已正确配置 LLM API Key，并注意保护个人密钥安全。
