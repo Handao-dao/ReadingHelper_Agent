@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import threading
 from typing import List, Optional, Tuple
 
 
@@ -10,6 +11,7 @@ class VocabDB:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
+        self._lock = threading.RLock()
         self._init_tables()
 
     def _init_tables(self):
@@ -56,17 +58,19 @@ class VocabDB:
     # ==============================
 
     def upsert_vocabulary(self, word: str, translation: str, context: str = "") -> int:
-        cur = self._conn.execute("""
-            INSERT INTO vocabulary (word, translation, context)
-            VALUES (?, ?, ?)
-            ON CONFLICT(word) DO UPDATE SET
-                encounter_count = encounter_count + 1,
-                last_seen_at = datetime('now','localtime'),
-                context = excluded.context
-            RETURNING id
-        """, (word, translation, context))
-        self._conn.commit()
-        return cur.fetchone()[0]
+        with self._lock:
+            cur = self._conn.execute("""
+                INSERT INTO vocabulary (word, translation, context)
+                VALUES (?, ?, ?)
+                ON CONFLICT(word) DO UPDATE SET
+                    encounter_count = encounter_count + 1,
+                    last_seen_at = datetime('now','localtime'),
+                    context = excluded.context
+                RETURNING id
+            """, (word, translation, context))
+            row = cur.fetchone()
+            self._conn.commit()
+            return row[0]
 
     def get_mastered_words(self) -> List[str]:
         rows = self._conn.execute(
@@ -111,17 +115,18 @@ class VocabDB:
         return items, total
 
     def set_mastered(self, vocab_id: int, mastered: bool):
-        if mastered:
-            self._conn.execute(
-                "UPDATE vocabulary SET mastered = 1, mastered_at = datetime('now','localtime') WHERE id = ?",
-                (vocab_id,)
-            )
-        else:
-            self._conn.execute(
-                "UPDATE vocabulary SET mastered = 0, mastered_at = NULL WHERE id = ?",
-                (vocab_id,)
-            )
-        self._conn.commit()
+        with self._lock:
+            if mastered:
+                self._conn.execute(
+                    "UPDATE vocabulary SET mastered = 1, mastered_at = datetime('now','localtime') WHERE id = ?",
+                    (vocab_id,)
+                )
+            else:
+                self._conn.execute(
+                    "UPDATE vocabulary SET mastered = 0, mastered_at = NULL WHERE id = ?",
+                    (vocab_id,)
+                )
+            self._conn.commit()
 
     def get_vocab_by_id(self, vocab_id: int) -> Optional[dict]:
         row = self._conn.execute(
@@ -130,17 +135,19 @@ class VocabDB:
         return dict(row) if row else None
 
     def set_mastered_by_word(self, word: str, mastered: bool) -> bool:
-        row = self._conn.execute(
-            "SELECT id FROM vocabulary WHERE word = ?", (word,)
-        ).fetchone()
-        if not row:
-            return False
-        self.set_mastered(row["id"], mastered)
-        return True
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT id FROM vocabulary WHERE word = ?", (word,)
+            ).fetchone()
+            if not row:
+                return False
+            self.set_mastered(row["id"], mastered)
+            return True
 
     def delete_vocabulary(self, vocab_id: int):
-        self._conn.execute("DELETE FROM vocabulary WHERE id = ?", (vocab_id,))
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute("DELETE FROM vocabulary WHERE id = ?", (vocab_id,))
+            self._conn.commit()
 
     # ==============================
     # 历史记录操作
@@ -152,12 +159,13 @@ class VocabDB:
         original_text: str,
         annotated_text: str,
     ):
-        title = original_text.strip().split("\n")[0][:80]
-        self._conn.execute("""
-            INSERT OR REPLACE INTO history (id, original_text, annotated_text, title)
-            VALUES (?, ?, ?, ?)
-        """, (task_id, original_text, annotated_text, title))
-        self._conn.commit()
+        with self._lock:
+            title = original_text.strip().split("\n")[0][:80]
+            self._conn.execute("""
+                INSERT OR REPLACE INTO history (id, original_text, annotated_text, title)
+                VALUES (?, ?, ?, ?)
+            """, (task_id, original_text, annotated_text, title))
+            self._conn.commit()
 
     def list_history(self, limit: int = 20, offset: int = 0) -> Tuple[List[dict], int]:
         total = self._conn.execute("SELECT COUNT(*) as cnt FROM history").fetchone()["cnt"]
@@ -174,7 +182,8 @@ class VocabDB:
         return dict(row) if row else None
 
     def delete_history(self, task_id: str):
-        self._conn.execute(
-            "DELETE FROM history WHERE id = ?", (task_id,)
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "DELETE FROM history WHERE id = ?", (task_id,)
+            )
+            self._conn.commit()
