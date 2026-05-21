@@ -1,3 +1,14 @@
+/**
+ * SSE 阅读流状态管理。
+ *
+ * 职责：
+ * - 调用 createProcessTask 获取 task_id → EventSource 连接 SSE
+ * - 解析 start/progress/completed/error 事件 → 驱动 UI 状态
+ * - 60 秒空闲超时保护，每次收到消息时重置计时器
+ * - 组件卸载时自动关闭 EventSource
+ *
+ * 返回：{ annotatedText, vocabulary, isProcessing, progress, errorMessage, startProcessStream, closeEventSource }
+ */
 import { ref, onBeforeUnmount } from 'vue'
 import { createProcessTask } from '../api/reading'
 

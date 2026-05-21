@@ -1,3 +1,10 @@
+/**
+ * vue-router 路由配置。
+ * 三个路由均使用懒加载（动态 import），按需拆分 chunk。
+ * - /            阅读页 (ReadingPage)
+ * - /vocabulary  生词本 (VocabularyPage)
+ * - /history     历史记录 (HistoryPage)
+ */
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [

@@ -1,3 +1,16 @@
+/**
+ * 标注文本渲染工具。
+ *
+ * 三步处理管道：
+ * 1. HTML 转义防止 XSS
+ * 2. [[word|翻译]] → <span class="vocab-word"> + <span class="translation">
+ * 3. 剩余纯文本单词 → <span class="text-word" data-word="...">
+ *
+ * masteredWords: 已掌握词 Set，匹配到的词渲染为无标注样式
+ * manuallyAnnotated: 用户手动添加的生词 Map，渲染为带翻译的高亮样式
+ */
+
+// HTML 实体转义，防止 v-html 中的 XSS
 const escapeHtml = (value = '') => {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -24,6 +37,7 @@ export const formatAnnotatedText = (
     }
   )
 
+  // 将段落 HTML 拆分为标签片段与文本片段，仅对文本片段做单词包装
   const wrapPlain = (paragraphHtml) => {
     const parts = paragraphHtml.split(/(<[^>]+>)/g)
     return parts.map(part => {

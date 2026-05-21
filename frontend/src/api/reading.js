@@ -1,4 +1,7 @@
-// 创建任务接口
+/**
+ * 阅读标注 API。
+ * createProcessTask: POST /api/create-process-task，提交文本 + 阅读水平，返回 task_id。
+ */
 
 export async function createProcessTask(text, level = 'intermediate') {
   const res = await fetch('/api/create-process-task', {

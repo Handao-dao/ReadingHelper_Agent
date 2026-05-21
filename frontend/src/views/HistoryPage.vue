@@ -1,4 +1,13 @@
 <script setup>
+/**
+ * 历史记录页面。
+ *
+ * 功能：
+ * - 翻译历史列表（按时间降序）
+ * - 点击展开详情（requestSeq 防竞态）
+ * - 删除（二次确认）
+ * - 详情渲染复用 formatAnnotatedText + masteredWords 过滤
+ */
 import { ref, onMounted, computed } from 'vue'
 import { fetchHistoryList, fetchHistoryDetail, deleteHistory } from '../api/history'
 import { formatAnnotatedText } from '../utils/formatText'

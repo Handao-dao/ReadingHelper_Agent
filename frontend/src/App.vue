@@ -1,4 +1,5 @@
 <script setup>
+// 根组件：全局背景 + Tab 导航栏 + <router-view> 页面出口
 </script>
 
 <template>
@@ -15,6 +16,7 @@
 </template>
 
 <style>
+/* ===== 全局字体 ===== */
 @font-face {
   font-family: 'Bookerly';
   src: url('/fonts/Bookerly.ttf') format('truetype');
@@ -31,7 +33,7 @@
   font-display: swap;
 }
 
-/* 全局重置 */
+/* ===== 全局重置 ===== */
 *,
 *::before,
 *::after {
@@ -45,7 +47,7 @@ body {
   background: #1d1710;
 }
 
-/* 全局生词与翻译样式（跨页面复用） */
+/* ===== 全局生词与翻译样式（跨页面复用） ===== */
 .vocab-word {
   color: #B8860B;
   font-weight: 600;

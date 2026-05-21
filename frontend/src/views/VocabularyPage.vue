@@ -1,4 +1,13 @@
 <script setup>
+/**
+ * 生词本页面。
+ *
+ * 功能：
+ * - 子 Tab：生词 / 已掌握
+ * - 搜索（300ms 防抖）、全选、批量标记已掌握/忽略
+ * - 展开查看上下文例句
+ * - Promise.allSettled 批量操作，部分失败不阻塞其余
+ */
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { fetchVocabulary, setMastered, deleteVocabulary as deleteVocab } from '../api/vocabulary'
 

@@ -1,4 +1,17 @@
 <script setup>
+/**
+ * 阅读页面 — 核心交互页面。
+ *
+ * 功能：
+ * - 文本输入 + 三级水平选择器（localStorage 持久化）
+ * - SSE 流式渲染标注文本（羊皮纸主题 + Bookerly 字体）
+ * - 事件委托捕获单词点击 → 请求 LookupAgent → 气泡弹窗
+ * - 气泡中支持添加生词/标记已掌握，通过 reactive Map/Set 即时渲染
+ *
+ * 关键 composables：
+ * - useReadingStream: SSE 连接 + 状态管理
+ * - useMasteredWords:  已掌握词 Set（单例共享）
+ */
 import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useReadingStream } from '../composables/useReadingStream'
 import { formatAnnotatedText } from '../utils/formatText'

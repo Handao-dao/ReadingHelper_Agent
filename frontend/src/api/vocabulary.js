@@ -1,3 +1,11 @@
+/**
+ * 生词本 API。
+ * - fetchVocabulary: 查询生词列表（支持搜索/筛选/分页）
+ * - setMastered / setMasteredByWord: 标记已掌握/取消
+ * - deleteVocabulary: 删除生词（即"忽略"）
+ * - fetchMasteredWords: 拉取全部已掌握词，转为 Set 供渲染过滤用
+ */
+
 const BASE = '/api/vocabulary'
 
 export async function fetchVocabulary({ search = '', mastered = undefined, limit = 50, offset = 0 } = {}) {

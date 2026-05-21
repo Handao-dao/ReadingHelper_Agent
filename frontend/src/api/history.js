@@ -1,3 +1,10 @@
+/**
+ * 翻译历史 API。
+ * - fetchHistoryList: 列表查询
+ * - fetchHistoryDetail: 单条详情（含完整 annotated_text）
+ * - deleteHistory: 删除
+ */
+
 const BASE = '/api/history'
 
 export async function fetchHistoryList({ limit = 20, offset = 0 } = {}) {

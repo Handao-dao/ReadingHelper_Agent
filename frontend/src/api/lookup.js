@@ -1,3 +1,9 @@
+/**
+ * 点击查词 API。
+ * - lookupWord: POST /api/word-lookup，查询单词 + 所在句子的翻译
+ * - addVocabToDB: POST /api/vocabulary，从气泡弹窗添加生词
+ */
+
 export async function lookupWord(word, sentence) {
   const res = await fetch('/api/word-lookup', {
     method: 'POST',
