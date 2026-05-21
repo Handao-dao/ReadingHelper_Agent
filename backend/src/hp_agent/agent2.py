@@ -1,7 +1,18 @@
+"""
+点击查词服务 (WordLookupService)。
+
+独立于批注流程，仅在用户点击单词时触发。每次请求 LLM 做两件事：
+1. 单词的上下文感知翻译（词级）
+2. 所在句子的整体翻译（句级）
+
+与 AnnotatorService 完全解耦：独立系统提示词、独立 temperature、独立调用时机。
+"""
+
 import json
 from hello_agents import HelloAgentsLLM, SimpleAgent
 from hp_agent.utils import extract_json
 
+# WordLookupService 系统提示词：英汉词典角色，输出严格 JSON
 LOOKUP_SYSTEM_PROMPT = """
 # Role
 You are an expert English-Chinese dictionary and translation assistant specialized in the Harry Potter series.
@@ -40,6 +51,7 @@ Use double quotes for all JSON keys and string values.
 }
 """.strip()
 
+# 用户提示词模板：注入 word 和 sentence
 LOOKUP_USER_PROMPT_TEMPLATE = """
 Word: {word}
 
@@ -53,6 +65,8 @@ Return valid JSON only.
 
 
 class WordLookupService:
+    """点击查词 Agent，给定单词 + 所在句子，返回词翻译和句翻译。"""
+
     def __init__(self, llm: HelloAgentsLLM):
         self._agent = SimpleAgent(
             name="Word Lookup",
@@ -61,6 +75,10 @@ class WordLookupService:
         )
 
     def lookup(self, word: str, sentence: str) -> dict:
+        """
+        执行查词。关闭 thinking mode 以加速响应。
+        返回 {"word", "word_cn", "sentence_cn"}。
+        """
         user_prompt = LOOKUP_USER_PROMPT_TEMPLATE.format(
             word=word,
             sentence=sentence

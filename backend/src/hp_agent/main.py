@@ -1,3 +1,20 @@
+"""
+HP-Agent FastAPI 后端入口。
+
+提供 7 个 REST API 端点 + 1 个 SSE 流式接口：
+- POST   /api/create-process-task      创建标注任务
+- GET    /api/process-stream           SSE 流式返回处理结果
+- GET    /api/vocabulary                生词列表
+- POST   /api/vocabulary                添加生词
+- PATCH  /api/vocabulary/{id}/master    标记已掌握/取消
+- DELETE /api/vocabulary/{id}           删除生词
+- POST   /api/word-lookup              点击查词
+- POST   /api/vocabulary/mark-by-word  按单词标记已掌握
+- GET    /api/history                   历史记录列表
+- GET    /api/history/{task_id}        历史记录详情
+- DELETE /api/history/{task_id}        删除历史记录
+"""
+
 import os
 import uuid
 import json
@@ -104,7 +121,14 @@ process_tasks: Dict[str, dict] = {}
 TASK_EXPIRE_MINUTES = 30
 
 def _maybe_save_completed(event: str, task_id: str, original_text: str):
-    """检测 SSE completed 事件并自动保存到 SQLite"""
+    """
+    检测 SSE completed 事件并自动保存到 SQLite。
+
+    仅在事件类型为 completed 时才执行：
+    1. 遍历 total_vocab，逐词 upsert 到生词表
+    2. 将 annotated_text 写入历史记录
+    异常静默捕获，避免阻塞 SSE 流。
+    """
     if not event.startswith("data: "):
         return
     try:
@@ -290,9 +314,13 @@ async def delete_history(task_id: str):
 @app.get("/api/process-stream")
 async def process_stream(task_id: str = Query(...)):
     """
-    第二步：
-    前端通过 EventSource 连接该接口。
-    后端根据 task_id 找到文本，然后流式返回处理结果。
+    SSE 流式处理接口（前端通过 EventSource 连接）。
+
+    流程：
+    1. 从 SQLite 读取已掌握词汇，截取上限条数防止 prompt 过长
+    2. 异步迭代 DocumentProcessor 的 chunk 并行处理流
+    3. 每收到一个事件即检测 completed 并触发自动保存
+    4. finally 块清理 process_tasks 缓存，避免内存堆积
     """
 
     task = process_tasks.get(task_id)

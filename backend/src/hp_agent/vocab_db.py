@@ -1,3 +1,13 @@
+"""
+SQLite 持久化层：生词本 (vocabulary) + 翻译历史 (history)。
+
+设计要点：
+- WAL 模式，读写不互相阻塞
+- threading.RLock 保护所有写操作，防止 SSE 自动保存与 REST API 并发冲突
+- sqlite3.Row 行工厂，查询返回字典式行对象
+- 生词 upsert 去重累加 encounter_count，历史记录 INSERT OR REPLACE
+"""
+
 import sqlite3
 import os
 import threading
@@ -5,6 +15,14 @@ from typing import List, Optional, Tuple
 
 
 class VocabDB:
+    """
+    基于 sqlite3 的生词与历史记录持久化。
+
+    使用单连接 + RLock 方案而非连接池，原因：
+    1. FastAPI async 单线程事件循环中，同步 sqlite3 调用天然串行
+    2. RLock 只需防范 SSE 回调与 REST handler 之间的协程切换并发
+    3. 零额外依赖，适合个人工具和小规模部署
+    """
     def __init__(self, db_path: str):
         os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
         self._conn = sqlite3.connect(db_path, check_same_thread=False, timeout=30)
@@ -58,6 +76,12 @@ class VocabDB:
     # ==============================
 
     def upsert_vocabulary(self, word: str, translation: str, context: str = "") -> int:
+        """
+        插入或更新生词。
+        - 新词：INSERT，encounter_count = 1
+        - 已有词：UPDATE，encounter_count + 1，更新 context
+        返回生词的 id（新增或已有）。
+        """
         with self._lock:
             cur = self._conn.execute("""
                 INSERT INTO vocabulary (word, translation, context)
@@ -85,6 +109,13 @@ class VocabDB:
         limit: int = 50,
         offset: int = 0
     ) -> Tuple[List[dict], int]:
+        """
+        查询生词列表。
+        - mastered=0: 未掌握，按 encounter_count 降序
+        - mastered=1: 已掌握，按 mastered_at 降序
+        - None: 全部
+        返回 (items, total) 元组。
+        """
         where = []
         params = []
 
@@ -115,6 +146,7 @@ class VocabDB:
         return items, total
 
     def set_mastered(self, vocab_id: int, mastered: bool):
+        """标记生词为已掌握或取消掌握，同时更新 mastered_at 时间戳。"""
         with self._lock:
             if mastered:
                 self._conn.execute(
@@ -135,6 +167,10 @@ class VocabDB:
         return dict(row) if row else None
 
     def set_mastered_by_word(self, word: str, mastered: bool) -> bool:
+        """
+        按单词标记已掌握/取消掌握。
+        返回是否找到该词（False 表示词不存在，调用方可提示用户）。
+        """
         with self._lock:
             row = self._conn.execute(
                 "SELECT id FROM vocabulary WHERE word = ?", (word,)
@@ -145,6 +181,7 @@ class VocabDB:
             return True
 
     def delete_vocabulary(self, vocab_id: int):
+        """删除指定生词（同时从生词本和已掌握列表中移除）。"""
         with self._lock:
             self._conn.execute("DELETE FROM vocabulary WHERE id = ?", (vocab_id,))
             self._conn.commit()
@@ -159,6 +196,10 @@ class VocabDB:
         original_text: str,
         annotated_text: str,
     ):
+        """
+        保存翻译历史。标题取原文首行前 80 字符。
+        同一 task_id 重复保存时覆盖（INSERT OR REPLACE）。
+        """
         with self._lock:
             title = original_text.strip().split("\n")[0][:80]
             self._conn.execute("""

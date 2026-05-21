@@ -1,3 +1,15 @@
+"""
+文档处理服务：文本切分 + 并行 LLM 标注 + SSE 流式推送。
+
+核心流程：
+1. _split_paragraphs：按空行切分段落
+2. _pack_paragraphs：将短段落合并为 300 词以内的 chunk
+3. process_chapter_stream：asyncio.Semaphore(3) 并行请求 LLM，
+   按完成顺序推送进度，按原始顺序组装结果
+
+去重策略：同一单词的不同大小写形式归一化（lower），首次出现保留原文形式。
+"""
+
 import re
 import asyncio
 from typing import List, Dict, AsyncGenerator, Optional
@@ -25,6 +37,7 @@ class DocumentProcessor:
         self.max_concurrency = max_concurrency
 
     def _normalize_quotes(self, text: str) -> str:
+        """将中文引号和标点替换为英文对应符号，避免 LLM 输出格式不一致。"""
         if not text:
             return text
 
@@ -172,7 +185,12 @@ class DocumentProcessor:
     def _pack_paragraphs(self, paragraphs: List[str]) -> List[str]:
         """
         将短段落合并成适合 LLM 处理的 chunk。
-        这样可以避免短对话被跳过，也能减少模型调用次数。
+
+        合并策略：
+        - 逐段累加，超过 max_chunk_words 时封包
+        - 达到 min_chunk_words 时提前封包，避免 chunk 过小
+        - 单个超长段落独占一个 chunk（不在语义中间截断）
+        这样可以减少 LLM 调用次数并降低短对话被跳过的风险。
         """
 
         chunks = []

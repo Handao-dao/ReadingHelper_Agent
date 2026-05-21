@@ -1,3 +1,12 @@
+"""
+全文标注服务 (AnnotatorService)。
+
+核心职责：
+- 接收英文段落 → 根据阅读水平选择标注策略 → 返回 [[word|翻译]] 格式的标注文本
+- 三级标注密度通过 LEVEL_PROFILES 的英文规则控制，以 user prompt 注入而非修改 system prompt
+- 已掌握词汇列表传入 prompt 以避免重复标注
+"""
+
 import json
 from typing import List, Dict
 from dataclasses import dataclass
@@ -9,12 +18,14 @@ from hp_agent.utils import extract_json
 # 1. 定义数据结构
 @dataclass
 class VocabItem:
+    """单个生词条目。"""
     word: str
     translation: str
     context: str
 
 @dataclass
 class AnnotationResult:
+    """标注结果：标注后文本 + 提取的生词列表。"""
     annotated_text: str
     vocabulary: List[VocabItem]
 
@@ -161,15 +172,22 @@ Return valid JSON only.
 
 # 3. 核心服务类
 class AnnotatorService:
+    """全文标注 Agent，根据阅读水平自动标注生词/短语/专有名词。"""
+
     def __init__(self, llm):
-        self._agent = SimpleAgent( 
+        self._agent = SimpleAgent(
             name="HP Annotator",
             system_prompt=ANNOTATOR_SYSTEM_PROMPT,
             llm=llm
         )
-    
+
     def annotate_text(self, text: str, mastered_words: List[str] = None, level: str = "intermediate") -> AnnotationResult:
-        """处理文本并返回带有翻译的文本和生词本"""
+        """
+        标注文本并返回 AnnotationResult。
+        - level: beginner / intermediate / advanced，控制标注密度
+        - mastered_words: 已掌握词列表，这些词在 prompt 中被跳过不标注
+        - 关闭 thinking mode 以加速翻译标注任务
+        """
         mastered_words = mastered_words or []
         profile = LEVEL_PROFILES.get(level, LEVEL_PROFILES["intermediate"])
         mastered_str = json.dumps(mastered_words, ensure_ascii=False)
