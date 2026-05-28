@@ -52,11 +52,12 @@ class DocumentProcessor:
         )
 
     async def process_chapter_stream(
-    self,
-    long_text: str,
-    mastered_words: list[str] | None = None,
-    level: str = "intermediate"
-) -> AsyncGenerator[str, None]:
+        self,
+        long_text: str,
+        mastered_words: list[str] | None = None,
+        level: str = "intermediate",
+        profile: str = "general",
+    ) -> AsyncGenerator[str, None]:
         """
         并行流式处理整章文本。
 
@@ -97,7 +98,8 @@ class DocumentProcessor:
                             self.annotator.annotate_text,
                             chunk_text,
                             mastered_words,
-                            level
+                            level,
+                            profile,
                         ),
                         timeout=120.0
                     )

@@ -123,6 +123,8 @@ hp_agent/
 
 ## 快速开始
 
+如果你想用 Docker Compose 一次性启动前后端，请参考 [DOCKER.md](DOCKER.md)。这是推荐给测试用户的运行方式。
+
 ### 1. 环境要求
 
 - Python 3.11+

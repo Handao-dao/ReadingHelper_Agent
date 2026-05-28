@@ -1,15 +1,15 @@
 /**
  * 阅读标注 API。
- * createProcessTask: POST /api/create-process-task，提交文本 + 阅读水平，返回 task_id。
+ * createProcessTask: POST /api/create-process-task，提交文本 + 阅读水平 + 阅读场景，返回 task_id。
  */
 
-export async function createProcessTask(text, level = 'intermediate') {
+export async function createProcessTask(text, level = 'intermediate', profile = 'general') {
   const res = await fetch('/api/create-process-task', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ text, level })
+    body: JSON.stringify({ text, level, profile })
   })
 
   if (!res.ok) {

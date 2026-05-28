@@ -77,7 +77,7 @@ export function useReadingStream() {
     }
   }
 
-  const startProcessStream = async (longText, level = 'intermediate') => {
+  const startProcessStream = async (longText, level = 'intermediate', profile = 'general') => {
     const text = String(longText || '').trim()
 
     if (!text) {
@@ -95,7 +95,7 @@ export function useReadingStream() {
     isProcessing.value = true
 
     try {
-      const result = await createProcessTask(text, level)
+      const result = await createProcessTask(text, level, profile)
       const taskId = result.task_id
 
       if (!taskId) {

@@ -20,13 +20,23 @@ import { lookupWord, addVocabToDB } from '../api/lookup'
 import { addMasteredWord, useMasteredWords } from '../composables/useMasteredWords'
 
 const LEVEL_LABELS = { beginner: '初级', intermediate: '中级', advanced: '高级' }
+const PROFILE_LABELS = {
+  general: '通用阅读',
+  fiction: '小说文学',
+  harry_potter: '哈利波特',
+  technical: '技术文档',
+  academic: '学术论文',
+  news_business: '新闻商业'
+}
 
 const inputText = ref('')
 const masteredWords = useMasteredWords()
 const manuallyAnnotated = ref(new Map())
 const level = ref(localStorage.getItem('hp_level') || 'intermediate')
+const profile = ref(localStorage.getItem('hp_profile') || 'general')
 
 watch(level, (val) => localStorage.setItem('hp_level', val))
+watch(profile, (val) => localStorage.setItem('hp_profile', val))
 
 const {
   annotatedText,
@@ -46,7 +56,7 @@ const handleSubmit = async () => {
 
   if (!text || isProcessing.value) return
 
-  await startProcessStream(text, level.value)
+  await startProcessStream(text, level.value, profile.value)
   inputText.value = ''
 }
 
@@ -205,17 +215,36 @@ onBeforeUnmount(() => {
           HP 阅读助手
         </div>
 
-        <div class="level-selector">
-          <button
-            v-for="(label, key) in LEVEL_LABELS"
-            :key="key"
-            class="level-btn"
-            :class="{ active: level === key }"
-            :disabled="isProcessing"
-            @click="level = key"
-          >
-            {{ label }}
-          </button>
+        <div class="reading-controls">
+          <label class="profile-selector">
+            <span class="profile-label">阅读场景</span>
+            <select
+              v-model="profile"
+              class="profile-select"
+              :disabled="isProcessing"
+            >
+              <option
+                v-for="(label, key) in PROFILE_LABELS"
+                :key="key"
+                :value="key"
+              >
+                {{ label }}
+              </option>
+            </select>
+          </label>
+
+          <div class="level-selector">
+            <button
+              v-for="(label, key) in LEVEL_LABELS"
+              :key="key"
+              class="level-btn"
+              :class="{ active: level === key }"
+              :disabled="isProcessing"
+              @click="level = key"
+            >
+              {{ label }}
+            </button>
+          </div>
         </div>
 
         <div
@@ -378,6 +407,40 @@ onBeforeUnmount(() => {
 .status-progress {
   font-size: 14px;
   color: #6c4b24;
+}
+
+/* 阅读控制区 */
+.reading-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6c4b24;
+  font-size: 13px;
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.profile-select {
+  height: 30px;
+  padding: 0 28px 0 10px;
+  border: 1px solid rgba(98, 60, 24, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 250, 236, 0.72);
+  color: #5a3417;
+  font-size: 13px;
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  cursor: pointer;
+}
+
+.profile-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 水平选择器 */
@@ -659,6 +722,20 @@ onBeforeUnmount(() => {
 
   .level-selector {
     align-self: stretch;
+  }
+
+  .reading-controls {
+    width: 100%;
+  }
+
+  .profile-selector {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .profile-select {
+    flex: 1;
+    max-width: 220px;
   }
 
   .level-btn {

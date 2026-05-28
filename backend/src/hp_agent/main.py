@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field
 
 from hp_agent.agent1 import AnnotatorService
 from hp_agent.agent2 import WordLookupService
+from hp_agent.prompt_profiles import PROFILE_PATTERN
 from hp_agent.sse_service import DocumentProcessor
 from hp_agent.utils import sse_event
 from hp_agent.vocab_db import VocabDB
@@ -94,6 +95,7 @@ async def shutdown():
 class CreateProcessTaskRequest(BaseModel):
     text: str = Field(..., max_length=500000, description="需要处理的长文本（上限约 50000 词）")
     level: str = Field(default="intermediate", pattern="^(beginner|intermediate|advanced)$", description="读者水平")
+    profile: str = Field(default="general", pattern=PROFILE_PATTERN, description="阅读场景预设")
 
 
 class SetMasteredRequest(BaseModel):
@@ -210,10 +212,17 @@ async def create_process_task(request: CreateProcessTaskRequest):
     process_tasks[task_id] = {
         "text": text,
         "level": request.level,
+        "profile": request.profile,
         "created_at": datetime.now(),
     }
 
-    logger.info(f"创建文本处理任务成功: task_id={task_id}, text_length={len(text)}, level={request.level}")
+    logger.info(
+        "创建文本处理任务成功: task_id=%s, text_length=%s, level=%s, profile=%s",
+        task_id,
+        len(text),
+        request.level,
+        request.profile,
+    )
 
     return {
         "task_id": task_id
@@ -333,6 +342,7 @@ async def process_stream(task_id: str = Query(...)):
 
     text = task["text"]
     level = task.get("level", "intermediate")
+    profile = task.get("profile", "general")
 
     async def event_generator():
         try:
@@ -344,7 +354,8 @@ async def process_stream(task_id: str = Query(...)):
             async for event in doc_processor.process_chapter_stream(
                 long_text=text,
                 mastered_words=mastered_list,
-                level=level
+                level=level,
+                profile=profile,
             ):
                 _maybe_save_completed(event, task_id, text)
                 yield event
