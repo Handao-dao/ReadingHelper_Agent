@@ -38,6 +38,7 @@ export function useReadingStream() {
       eventSource.close()
       eventSource = null
     }
+    // Closing the SSE stream is the single release point for the page lock.
     setBusy(READING_BUSY_SOURCE, false)
   }
 

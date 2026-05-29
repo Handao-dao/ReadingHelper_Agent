@@ -50,6 +50,8 @@ class SettingsStore:
             return data.get("llm", {})
 
     def get_effective_llm_settings(self) -> dict:
+        # UI-saved settings win over .env values so local testers can configure
+        # the app from the browser without editing files.
         saved = self.get_llm_settings()
         api_key = saved.get("api_key") or os.getenv("LLM_API_KEY", "")
         base_url = saved.get("base_url") or os.getenv("LLM_BASE_URL", DEFAULT_BASE_URL)

@@ -81,6 +81,8 @@ doc_processor: DocumentProcessor | None = None
 
 
 def rebuild_llm_services():
+    # Rebuild these lightweight service wrappers whenever the local API Key
+    # changes. This keeps the fixed DeepSeek model while allowing browser setup.
     global llm, annotator_svc, lookup_svc, doc_processor
 
     settings = settings_store.get_effective_llm_settings()
@@ -102,6 +104,8 @@ def rebuild_llm_services():
 
 
 def ensure_llm_services():
+    # Lazily initialize LLM services so the app can boot before the user enters
+    # an API Key on the settings page.
     if doc_processor and lookup_svc:
         return
     rebuild_llm_services()

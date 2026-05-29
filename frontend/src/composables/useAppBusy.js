@@ -1,5 +1,7 @@
 import { computed, ref } from 'vue'
 
+// A small global lock for long-running flows such as SSE annotation. Multiple
+// sources can hold the lock without accidentally clearing each other.
 const busySources = ref(new Set())
 
 export function useAppBusy() {

@@ -32,6 +32,8 @@ cd ReadingHelper_Agent
 docker compose up --build
 ```
 
+Windows 用户也可以直接双击根目录的 `start-app.bat`，脚本会检查 Docker 命令并打开 `http://localhost:8080`。
+
 3. 打开浏览器：
 
 ```text

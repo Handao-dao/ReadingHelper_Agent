@@ -126,6 +126,14 @@ hp_agent/
 ## 快速开始
 
 如果你想用 Docker Compose 一次性启动前后端，请参考 [DOCKER.md](DOCKER.md)。这是推荐给测试用户的运行方式。
+Windows 测试用户也可以直接双击根目录的 `start-app.bat` 启动 Docker Compose 版本，并在浏览器的“设置”页填写 DeepSeek API Key。
+
+### 本地应用化更新
+
+- 新增“设置”页面，DeepSeek API Key 可在浏览器中填写并保存，默认模型保持 `deepseek-v4-pro`。
+- API Key 设置、生词本和阅读历史统一保存在后端本地数据目录中，Docker 部署时对应 `backend/data`。
+- 阅读标注处理中会锁定导航、输入和正文点击，避免误触中断 SSE 传输。
+- Windows 测试用户可通过 `start-app.bat` 一键启动 Docker Compose 版本。
 
 ### 1. 环境要求
 

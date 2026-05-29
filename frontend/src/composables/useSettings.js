@@ -5,6 +5,8 @@ const settings = ref(null)
 const loading = ref(false)
 const errorMessage = ref('')
 
+// Shared settings state lets the reading page react immediately after the
+// settings page saves an API Key.
 export function useSettings() {
   const isConfigured = computed(() => Boolean(settings.value?.configured))
 
