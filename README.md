@@ -1,3 +1,23 @@
+<p align="center">
+  <img src="docs/assets/readme-hero.svg" alt="ReadingHelper Agent and Text Annotation Framework" width="100%" />
+</p>
+
+<p align="center">
+  <a href="#reading-helper-agent">阅读助手</a>
+  ·
+  <a href="text_annotation_framework/README.zh-CN.md">抽象框架 中文说明</a>
+  ·
+  <a href="text_annotation_framework/README.md">Framework English</a>
+  ·
+  <a href="DOCKER.md">Docker 运行</a>
+</p>
+
+<p align="center">
+  <strong>一个英文阅读助手项目，也沉淀出了一套可复用的通用文本标注框架。</strong>
+</p>
+
+<a id="reading-helper-agent"></a>
+
 # HP-Agent
 
 > 英文原著阅读助手：面向英文小说、原版读物和长文本阅读场景，自动识别生词、短语、专有名词和上下文表达，并在原文中插入中文释义，帮助用户更顺畅地完成英文阅读。

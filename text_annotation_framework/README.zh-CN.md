@@ -1,3 +1,9 @@
+<p align="center">
+  <a href="../README.md">返回仓库首页</a>
+  ·
+  <a href="README.md">English</a>
+</p>
+
 # Text Annotation Framework 中文说明
 
 这是一个从旧版英文阅读助手中抽象出来的“通用文本标注框架”示例项目。它的目标不是只做生词翻译，而是提供一套可复用的能力：

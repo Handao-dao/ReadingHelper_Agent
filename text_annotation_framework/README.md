@@ -1,3 +1,9 @@
+<p align="center">
+  <a href="../README.md">Repository Home</a>
+  ·
+  <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 # Text Annotation Framework
 
 A small reference framework for turning arbitrary text into structured, clickable annotations.

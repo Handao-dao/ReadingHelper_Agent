@@ -8,10 +8,11 @@
  * - 删除（二次确认）
  * - 详情渲染复用 formatAnnotatedText + masteredWords 过滤
  */
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { fetchHistoryList, fetchHistoryDetail, deleteHistory } from '../api/history'
 import { formatAnnotatedText } from '../utils/formatText'
 import { useMasteredWords } from '../composables/useMasteredWords'
+import { exportHistoryShareImages } from '../utils/exportShareImages'
 
 const items = ref([])
 const total = ref(0)
@@ -20,6 +21,7 @@ const expandedId = ref(null)
 const expandedRecord = ref(null)
 const expandedLoading = ref(false)
 const errorMsg = ref('')
+const exportingId = ref(null)
 const masteredWords = useMasteredWords()
 
 async function load() {
@@ -65,6 +67,36 @@ async function handleDelete(taskId) {
   await load()
 }
 
+async function handleExportShareImages(record) {
+  if (!record || exportingId.value) return
+
+  exportingId.value = record.id
+  errorMsg.value = ''
+  try {
+    await nextTick()
+    await exportHistoryShareImages({
+      title: record.title || 'Reading Helper',
+      annotatedText: record.annotated_text,
+      masteredWords: masteredWords.value,
+      filenamePrefix: `reading-share-${record.id}`,
+    })
+  } catch (error) {
+    console.error(error)
+    errorMsg.value = '导出分享图失败，请重试；如果浏览器拦截下载，请允许多个文件下载后再试。'
+  } finally {
+    exportingId.value = null
+  }
+}
+
+async function handleExportItem(item) {
+  if (!item || exportingId.value) return
+
+  const record = expandedRecord.value?.id === item.id
+    ? expandedRecord.value
+    : await fetchHistoryDetail(item.id)
+  await handleExportShareImages(record)
+}
+
 const expandedHtml = computed(() => {
   if (!expandedRecord.value) return ''
   return formatAnnotatedText(expandedRecord.value.annotated_text, masteredWords.value)
@@ -94,13 +126,24 @@ onMounted(async () => {
         >
           <div class="item-main" @click="toggleExpand(item.id)">
             <div class="item-title">{{ item.title || '无标题' }}</div>
-            <div class="item-time">{{ item.created_at }}</div>
+            <div class="item-meta">
+              <div class="item-time">{{ item.created_at }}</div>
+              <button
+                class="row-export-btn"
+                :disabled="exportingId === item.id"
+                @click.stop="handleExportItem(item)"
+              >
+                {{ exportingId === item.id ? '导出中...' : '导出分享图' }}
+              </button>
+            </div>
           </div>
 
           <div class="item-expand" v-if="expandedId === item.id">
             <div class="expand-loading" v-if="expandedLoading">加载中...</div>
             <template v-else>
-              <button class="delete-btn" @click="handleDelete(item.id)">删除此记录</button>
+              <div class="history-actions">
+                <button class="delete-btn" @click="handleDelete(item.id)">删除此记录</button>
+              </div>
               <div
                 class="reading-content"
                 v-html="expandedHtml"
@@ -218,6 +261,13 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+.item-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .item-expand {
   padding: 0 18px 18px;
 }
@@ -244,9 +294,17 @@ onMounted(async () => {
   margin-bottom: 1.2em;
 }
 
+.history-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.row-export-btn,
 .delete-btn {
   padding: 8px 18px;
-  margin-bottom: 12px;
   border: 1px solid rgba(180, 42, 42, 0.3);
   border-radius: 8px;
   background: rgba(180, 42, 42, 0.06);
@@ -255,6 +313,22 @@ onMounted(async () => {
   cursor: pointer;
   transition: all 0.15s;
   font-family: inherit;
+}
+
+.row-export-btn {
+  padding: 6px 14px;
+  border-color: rgba(98, 60, 24, 0.24);
+  background: #5a3417;
+  color: #fff2d5;
+}
+
+.row-export-btn:hover:not(:disabled) {
+  background: #6e411d;
+}
+
+.row-export-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .delete-btn:hover {
@@ -280,6 +354,13 @@ onMounted(async () => {
 
   .item-main {
     padding: 12px 14px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .item-meta {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .reading-content {

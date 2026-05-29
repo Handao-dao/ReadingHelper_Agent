@@ -1,0 +1,58 @@
+<svg width="1280" height="360" viewBox="0 0 1280 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">ReadingHelper Agent and Text Annotation Framework</title>
+  <desc id="desc">A banner for a project that combines an English reading assistant with a reusable text annotation framework.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1280" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#20345C"/>
+      <stop offset="0.48" stop-color="#496E91"/>
+      <stop offset="1" stop-color="#E9C999"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="46" y1="54" x2="1018" y2="321" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF8E8" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#F0E2C5" stop-opacity="0.78"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#10203D" flood-opacity="0.32"/>
+    </filter>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0V28" stroke="#FFFFFF" stroke-opacity="0.07"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="360" fill="url(#sky)"/>
+  <rect width="1280" height="360" fill="url(#grid)"/>
+
+  <circle cx="1104" cy="62" r="2.5" fill="#FFF8DA"/>
+  <circle cx="1156" cy="112" r="2" fill="#FFF8DA"/>
+  <circle cx="1002" cy="96" r="1.8" fill="#FFF8DA"/>
+  <circle cx="928" cy="48" r="2.2" fill="#FFF8DA"/>
+  <circle cx="1210" cy="72" r="1.8" fill="#FFF8DA"/>
+  <circle cx="822" cy="126" r="2" fill="#FFF8DA"/>
+  <path d="M1036 44L1084 28" stroke="#FFF6C9" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+  <path d="M1048 54L1076 45" stroke="#FFF6C9" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+
+  <path d="M0 282C156 219 271 235 411 260C597 293 728 310 902 247C1058 190 1179 203 1280 240V360H0V282Z" fill="#415C87" opacity="0.72"/>
+  <path d="M0 312C181 271 319 284 473 307C659 334 782 333 936 286C1086 240 1193 254 1280 287V360H0V312Z" fill="#263F67" opacity="0.74"/>
+  <path d="M0 334C180 309 337 318 494 332C688 349 849 349 1016 315C1130 292 1212 301 1280 322V360H0V334Z" fill="#172A49" opacity="0.88"/>
+
+  <g filter="url(#shadow)">
+    <rect x="48" y="50" width="720" height="250" rx="22" fill="url(#panel)" stroke="#FFFFFF" stroke-opacity="0.58"/>
+    <text x="86" y="116" fill="#4F3721" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="800" letter-spacing="1.5">ReadingHelper Agent</text>
+    <text x="86" y="178" fill="#172A49" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="58" font-weight="850">Readable Text,</text>
+    <text x="86" y="238" fill="#172A49" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="58" font-weight="850">Reusable Annotations</text>
+    <text x="90" y="274" fill="#5D6B7E" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="20" font-weight="600">English reading assistant · Generic text annotation framework</text>
+  </g>
+
+  <g transform="translate(880 86)">
+    <rect x="0" y="0" width="300" height="190" rx="24" fill="#FFF7E6" fill-opacity="0.94" stroke="#FFFFFF" stroke-opacity="0.55"/>
+    <rect x="34" y="38" width="232" height="20" rx="10" fill="#7C5B38" fill-opacity="0.25"/>
+    <rect x="34" y="74" width="160" height="18" rx="9" fill="#7C5B38" fill-opacity="0.2"/>
+    <rect x="34" y="108" width="218" height="18" rx="9" fill="#7C5B38" fill-opacity="0.2"/>
+    <rect x="104" y="71" width="94" height="26" rx="8" fill="#FFD977" stroke="#AB7A16"/>
+    <text x="114" y="90" fill="#4F3721" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="800">keyword</text>
+    <path d="M68 146H238" stroke="#264769" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="68" cy="146" r="13" fill="#69B3A2"/>
+    <circle cx="153" cy="146" r="13" fill="#FFD977"/>
+    <circle cx="238" cy="146" r="13" fill="#E68D5B"/>
+  </g>
+</svg>
